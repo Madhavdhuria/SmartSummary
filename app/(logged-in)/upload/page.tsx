@@ -68,7 +68,6 @@ const Page = () => {
       setLoading(false);
       return;
     }
-    console.log(res);
     
 
     toast("Processing started", {
@@ -76,7 +75,8 @@ const Page = () => {
     });
 
     const summary = await generatePdfSummary(res);
-    console.log(summary);
+
+    
   };
 
   return (

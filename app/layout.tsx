@@ -13,7 +13,7 @@ const fontSans = FontSans({
 });
 
 export const metadata: Metadata = {
-  title: "QuickSum",
+  title: "SmartSummary",
   description:
     "AI-powered tool to quickly summarize PDFs, documents, and lengthy content into concise insights.",
 };

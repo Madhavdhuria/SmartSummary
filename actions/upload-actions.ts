@@ -1,6 +1,7 @@
 "use server";
 
 import { extractandsummarizePdf } from "@/lib/langchain";
+import { generatePdfSummaryfromOpenai } from "@/lib/openai";
 
 export async function generatePdfSummary(
   UploadResponse: {
@@ -10,7 +11,7 @@ export async function generatePdfSummary(
     url: string;
     serverData?: {
       userId: string;
-      file: { url: string; name: string };
+      file: { ufsUrl: string; name: string };
     };
   }[]
 ) {
@@ -24,7 +25,7 @@ export async function generatePdfSummary(
 
   const first = UploadResponse[0];
 
-  if (!first?.serverData?.file?.url) {
+  if (!first?.serverData?.file?.ufsUrl) {
     return {
       success: false,
       message: "Missing file data",
@@ -35,18 +36,44 @@ export async function generatePdfSummary(
   const {
     serverData: {
       userId,
-      file: { url: pdfUrl, name: fileName },
+      file: { ufsUrl: pdfUrl, name: fileName },
     },
   } = first;
 
   try {
-    const summary = await extractandsummarizePdf(pdfUrl);
+    const pdfText = await extractandsummarizePdf(pdfUrl);
+    if (!pdfText) {
+      return {
+        success: false,
+        message: "No text extracted from PDF",
+        data: null,
+      };
+    }
 
-    return {
-      success: true,
-      message: "Summary generated successfully",
-      data: summary,
-    };
+    try {
+      const summary = await generatePdfSummaryfromOpenai(pdfText);
+      if (!summary) {
+        return {
+          success: false,
+          message: "No summary generated",
+          data: null,
+        };
+      }
+      console.log("Summary generated successfully:", summary);
+
+      return {
+        success: true,
+        message: "Summary generated successfully",
+        data: summary,
+      };
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      return {
+        success: false,
+        message: "Error generating summary",
+        data: null,
+      };
+    }
   } catch (error) {
     console.error("Summary generation error:", error);
     return {

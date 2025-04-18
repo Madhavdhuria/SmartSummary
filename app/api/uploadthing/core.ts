@@ -21,7 +21,7 @@ export const ourFileRouter = {
         file: {
           name: file.name,
           size: file.size,
-          url: file.url,
+          ufsUrl: file.ufsUrl,
           key: file.key,
           type: file.type,
         }
