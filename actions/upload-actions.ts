@@ -1,20 +1,19 @@
 "use server";
 
+import { generateGeminiSummary } from "@/lib/gemini";
 import { extractandsummarizePdf } from "@/lib/langchain";
 import { generatePdfSummaryfromOpenai } from "@/lib/openai";
 
-export async function generatePdfSummary(
-  UploadResponse: {
-    name: string;
-    size: number;
-    key: string;
-    url: string;
-    serverData?: {
-      userId: string;
-      file: { ufsUrl: string; name: string };
-    };
-  }[]
-) {
+export async function generatePdfSummary(UploadResponse: {
+  name: string;
+  size: number;
+  key: string;
+  url: string;
+  serverData?: {
+    userId: string;
+    file: { ufsUrl: string; name: string };
+  };
+}[]) {
   if (!UploadResponse || UploadResponse.length === 0) {
     return {
       success: false,
@@ -50,32 +49,47 @@ export async function generatePdfSummary(
       };
     }
 
+    let summary = null;
+
     try {
-      const summary = await generatePdfSummaryfromOpenai(pdfText);
+      summary = await generatePdfSummaryfromOpenai(pdfText);
+      if (summary) {
+        return {
+          success: true,
+          message: "Summary generated using OpenAI",
+          data: summary,
+        };
+      }
+    } catch (error: any) {
+      console.warn("OpenAI summary failed, trying Gemini...", error.message);
+    }
+
+    // Fallback to Gemini if OpenAI fails or returns null
+    try {
+      summary = await generateGeminiSummary(pdfText);
       if (!summary) {
         return {
           success: false,
-          message: "No summary generated",
+          message: "Gemini summary was empty",
           data: null,
         };
       }
-      console.log("Summary generated successfully:", summary);
 
       return {
         success: true,
-        message: "Summary generated successfully",
+        message: "Summary generated using Gemini",
         data: summary,
       };
-    } catch (error) {
-      console.error("Error generating summary:", error);
+    } catch (geminiError) {
+      console.error("Gemini summary generation error:", geminiError);
       return {
         success: false,
-        message: "Error generating summary",
+        message: "Failed to generate summary using available AI models",
         data: null,
       };
     }
   } catch (error) {
-    console.error("Summary generation error:", error);
+    console.error("General summary generation error:", error);
     return {
       success: false,
       message: "Error generating summary",

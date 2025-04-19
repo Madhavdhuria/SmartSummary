@@ -60,6 +60,8 @@ const Page = () => {
       return;
     }
 
+    
+
     const res = await startUpload([file]);
     if (!res) {
       toast.error("Upload error", {
@@ -76,7 +78,7 @@ const Page = () => {
 
     const summary = await generatePdfSummary(res);
 
-    
+    console.log(summary);
   };
 
   return (
