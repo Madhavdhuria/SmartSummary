@@ -77,7 +77,7 @@ const Page = () => {
     });
 
     const summary = await generatePdfSummary(res);
-
+    console.log("summary:-");
     console.log(summary);
   };
 
