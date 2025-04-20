@@ -3,7 +3,10 @@ import React, { useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useUploadThing } from "@/utils/uploadthings";
-import { generatePdfSummary } from "@/actions/upload-actions";
+import {
+  generatePdfSummary,
+  storePdfSummaryAction,
+} from "@/actions/upload-actions";
 
 const schema = z.object({
   file: z
@@ -60,8 +63,6 @@ const Page = () => {
       return;
     }
 
-    
-
     const res = await startUpload([file]);
     if (!res) {
       toast.error("Upload error", {
@@ -70,15 +71,32 @@ const Page = () => {
       setLoading(false);
       return;
     }
-    
 
     toast("Processing started", {
       description: "Hang on, our AI is summarizing your file.",
     });
 
     const summary = await generatePdfSummary(res);
-    console.log("summary:-");
-    console.log(summary);
+    let storeData;
+    if (summary.success) {
+      const match = summary.data?.match(/📌\s*\*\*Title:\*\*\s*\n?(.+)/);
+      const title = match ? match[1].trim() : "Untitled";
+
+      storeData = await storePdfSummaryAction({
+        status: "completed",
+        originalFileUrl: res[0].serverData.file.ufsUrl,
+        summaryText: summary.data ?? "",
+        fileName: res[0].serverData.file.name,
+        title,
+      });
+
+      if (storeData.success) {
+        toast.success("Summary generated", {
+          description:
+            "Your PDF summary has been successfully summarized and stored.",
+        });
+      }
+    }
   };
 
   return (
