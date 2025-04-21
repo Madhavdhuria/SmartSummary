@@ -7,6 +7,7 @@ import {
   generatePdfSummary,
   storePdfSummaryAction,
 } from "@/actions/upload-actions";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
   file: z
@@ -20,6 +21,7 @@ const schema = z.object({
 });
 
 const Page = () => {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [loading, setLoading] = useState(false);
 
@@ -95,6 +97,7 @@ const Page = () => {
           description:
             "Your PDF summary has been successfully summarized and stored.",
         });
+        router.push("/summary/" + storeData?.data?.id);
       }
     }
   };

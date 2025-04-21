@@ -5,6 +5,7 @@ import { generateGeminiSummary } from "@/lib/gemini";
 import { extractandsummarizePdf } from "@/lib/langchain";
 import { generatePdfSummaryfromOpenai } from "@/lib/openai";
 import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 type StorePdfSummaryArgs = {
   userId?: string;
   originalFileUrl: string;
@@ -188,12 +189,6 @@ export async function storePdfSummaryAction({
         message: savedPdfSummary.message,
       };
     }
-
-    return {
-      success: true,
-      message: "PDF summary stored successfully",
-      data: savedPdfSummary.data,
-    };
   } catch (err) {
     return {
       success: false,
@@ -201,4 +196,12 @@ export async function storePdfSummaryAction({
       data: null,
     };
   }
+
+  revalidatePath("summary/" + savedPdfSummary?.data?.id);
+  console.log("Summary stored successfully:", savedPdfSummary.data);
+  return {
+    success: true,
+    message: "PDF summary stored successfully",
+    data: savedPdfSummary.data,
+  };
 }

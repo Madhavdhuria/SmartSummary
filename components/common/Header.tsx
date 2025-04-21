@@ -13,15 +13,16 @@ const Header = () => {
         >
           <FileText className="w-5 h-5 lg:w-8 lg:h-8 text-gray-900 hover:rotate-12 transform transition duration-200 ease-in-out" />
           <span className="font-extrabold lg:text-xl text-gray-900">
-          SmartSummary 
+            SmartSummary
           </span>
         </NavLink>
       </div>
       <div className="flex lg:justify-end lg:flex-1">
         <div className="flex gap-3 items-center">
           <SignedIn>
+            <NavLink href={"/dashboard"}>Your Summaries</NavLink>
             <NavLink href={"/upload"}>Upload a PDF</NavLink>
-            <UserButton/>
+            <UserButton />
           </SignedIn>
         </div>
         <SignedOut>
