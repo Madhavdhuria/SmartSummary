@@ -1,3 +1,4 @@
+import SummaryViewer from "@/components/Summary/SummaryViewer";
 import { getSummary } from "@/lib/summaries";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
@@ -9,6 +10,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const summary = await getSummary(id);
 
   if (!summary) notFound();
+  console.log(typeof summary.summary_text);
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
@@ -32,9 +34,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           </div>
         </div>
 
-        <div className="overflow-x-auto no-scrollbar flex space-x-4 snap-x snap-mandatory border-2 rounded-lg p-3 shadow-md bg-white ">
-          {summary.summary_text}
-        </div>
+        <main className="flex flex-col items-center w-full px-2 sm:px-4 md:px-6 lg:px-8 py-8">
+           <SummaryViewer text={summary.summary_text} />
+         </main>
 
         <div className="text-center mt-4 p-2 flex justify-around items-center">
           <button className="bg-rose-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-rose-600 transition duration-200">
