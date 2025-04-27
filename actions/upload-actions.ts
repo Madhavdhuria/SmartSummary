@@ -6,6 +6,7 @@ import { extractandsummarizePdf } from "@/lib/langchain";
 import { generatePdfSummaryfromOpenai } from "@/lib/openai";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+
 type StorePdfSummaryArgs = {
   userId?: string;
   originalFileUrl: string;
@@ -15,26 +16,27 @@ type StorePdfSummaryArgs = {
   status?: string;
 };
 
-export async function generatePdfSummary(
+const createSuccessResponse = (message: string, data: any = null) => ({
+  success: true,
+  message,
+  data,
+});
+
+const createErrorResponse = (message: string, data: any = null) => ({
+  success: false,
+  message,
+  data,
+});
+
+export async function ExtractText(
   UploadResponse: {
     name: string;
     size: number;
     key: string;
     url: string;
-    serverData?: {
-      userId: string;
-      file: { ufsUrl: string; name: string };
-    };
+    serverData?: { userId: string; file: { ufsUrl: string; name: string } };
   }[]
 ) {
-  if (!UploadResponse || UploadResponse.length === 0) {
-    return {
-      success: false,
-      message: "No file uploaded",
-      data: null,
-    };
-  }
-
   const first = UploadResponse[0];
 
   if (!first?.serverData?.file?.ufsUrl) {
@@ -52,62 +54,47 @@ export async function generatePdfSummary(
     },
   } = first;
 
-  try {
-    const pdfText = await extractandsummarizePdf(pdfUrl);
-    if (!pdfText) {
-      return {
-        success: false,
-        message: "No text extracted from PDF",
-        data: null,
-      };
-    }
+  if (!pdfUrl) {
+    return createErrorResponse("Missing file data");
+  }
 
+  const pdfText = await extractandsummarizePdf(pdfUrl);
+  if (!pdfText) {
+    return createErrorResponse("No text extracted from PDF");
+  }
+
+  return createSuccessResponse("Text extracted successfully", pdfText);
+}
+
+export async function generatePdfSummary(pdfText: string) {
+  try {
     let summary = null;
 
     try {
       summary = await generatePdfSummaryfromOpenai(pdfText);
       if (summary) {
-        return {
-          success: true,
-          message: "Summary generated using OpenAI",
-          data: summary,
-        };
+        return createSuccessResponse("Summary generated using OpenAI", summary);
       }
     } catch (error: any) {
       console.warn("OpenAI summary failed, trying Gemini...", error.message);
     }
 
-    // Fallback to Gemini if OpenAI fails or returns null
     try {
       summary = await generateGeminiSummary(pdfText);
       if (!summary) {
-        return {
-          success: false,
-          message: "Gemini summary was empty",
-          data: null,
-        };
+        return createErrorResponse("Gemini summary was empty");
       }
 
-      return {
-        success: true,
-        message: "Summary generated using Gemini",
-        data: summary,
-      };
+      return createSuccessResponse("Summary generated using Gemini", summary);
     } catch (geminiError) {
       console.error("Gemini summary generation error:", geminiError);
-      return {
-        success: false,
-        message: "Failed to generate summary using available AI models",
-        data: null,
-      };
+      return createErrorResponse(
+        "Failed to generate summary using available AI models"
+      );
     }
   } catch (error) {
     console.error("General summary generation error:", error);
-    return {
-      success: false,
-      message: "Error generating summary",
-      data: null,
-    };
+    return createErrorResponse("Error generating summary");
   }
 }
 
@@ -142,18 +129,10 @@ async function storePdfSummary({
       RETURNING *;
     `;
 
-    return {
-      success: true,
-      message: "PDF summary stored successfully",
-      data: result[0],
-    };
+    return createSuccessResponse("PDF summary stored successfully", result[0]);
   } catch (error) {
     console.error("Error storing summary:", error);
-    return {
-      success: false,
-      message: "Error storing summary",
-      data: null,
-    };
+    return createErrorResponse("Error storing summary");
   }
 }
 
@@ -165,13 +144,11 @@ export async function storePdfSummaryAction({
   fileName,
 }: StorePdfSummaryArgs) {
   let savedPdfSummary = null;
+
   try {
     const { userId } = await auth();
     if (!userId) {
-      return {
-        success: false,
-        message: "User not authenticated",
-      };
+      return createErrorResponse("User not authenticated");
     }
 
     savedPdfSummary = await storePdfSummary({
@@ -184,24 +161,16 @@ export async function storePdfSummaryAction({
     });
 
     if (!savedPdfSummary.success) {
-      return {
-        success: false,
-        message: savedPdfSummary.message,
-      };
+      return createErrorResponse(savedPdfSummary.message);
     }
-  } catch (err) {
-    return {
-      success: false,
-      message: "Error storing summary",
-      data: null,
-    };
-  }
 
-  revalidatePath("summary/" + savedPdfSummary?.data?.id);
-  console.log("Summary stored successfully:", savedPdfSummary.data);
-  return {
-    success: true,
-    message: "PDF summary stored successfully",
-    data: savedPdfSummary.data,
-  };
+    revalidatePath("summary/" + savedPdfSummary.data?.id);
+    return createSuccessResponse(
+      "PDF summary stored successfully",
+      savedPdfSummary.data
+    );
+  } catch (err) {
+    console.error("Error during storePdfSummaryAction:", err);
+    return createErrorResponse("Error storing summary");
+  }
 }
